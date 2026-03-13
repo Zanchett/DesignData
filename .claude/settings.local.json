@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Read(//private/tmp/**)",
+      "Bash(npx create-next-app@latest design-data --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add button card table input select badge skeleton tabs chart separator avatar popover calendar tooltip -y)",
+      "Bash(npx next:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \":*)",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d '{\"\"\"\"step\"\"\"\":\"\"\"\"members\"\"\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d '{\"\"\"\"step\"\"\"\":\"\"\"\"folders\"\"\"\",\"\"\"\"sync_log_id\"\"\"\":\"\"\"\"fcab6f04-22e8-4bca-8825-dbc19ba71b29\"\"\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d '{\"\"\"\"step\"\"\"\":\"\"\"\"lists\"\"\"\",\"\"\"\"sync_log_id\"\"\"\":\"\"\"\"fcab6f04-22e8-4bca-8825-dbc19ba71b29\"\"\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d '{\"\"\"\"step\"\"\"\":\"\"\"\"tasks\"\"\"\",\"\"\"\"sync_log_id\"\"\"\":\"\"\"\"fcab6f04-22e8-4bca-8825-dbc19ba71b29\"\"\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d '{\"\"step\"\":\"\"members\"\"}')",
+      "Bash(LOG_ID=\"23ff37da-5cbd-4827-8e32-e6d1cd4b378b\")",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d \"{\"\"step\"\":\"\"folders\"\",\"\"sync_log_id\"\":\"\"$LOG_ID\"\"}\")",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d \"{\"\"step\"\":\"\"lists\"\",\"\"sync_log_id\"\":\"\"$LOG_ID\"\"}\")",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d \"{\"\"step\"\":\"\"tasks\"\",\"\"sync_log_id\"\":\"\"$LOG_ID\"\"}\")",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d \"{\"\"step\"\":\"\"time_entries\"\",\"\"sync_log_id\"\":\"\"$LOG_ID\"\"}\")",
+      "Bash(curl -s http://localhost:3000/api/sync -X POST -H \"Content-Type: application/json\" -d \"{\"\"step\"\":\"\"finalize\"\",\"\"sync_log_id\"\":\"\"$LOG_ID\"\"}\")",
+      "Bash(npx tsx -e \":*)",
+      "Bash(npx xlsx-cli:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find /Users/gabrielzanchett/Projects/DesignData/src -type f \\\\\\(-name *hour* -o -name *tracker* \\\\\\))",
+      "Bash(npx shadcn@latest add alert-dialog -y)",
+      "Bash(ls -lh /Users/gabrielzanchett/Projects/DesignData/tailwind*)",
+      "Bash(ls -lh /Users/gabrielzanchett/Projects/DesignData/src/app/dashboard/*/page.tsx /Users/gabrielzanchett/Projects/DesignData/src/app/dashboard/layout.tsx /Users/gabrielzanchett/Projects/DesignData/src/components/dashboard/header.tsx /Users/gabrielzanchett/Projects/DesignData/src/components/dashboard/sidebar.tsx /Users/gabrielzanchett/Projects/DesignData/src/app/dashboard/page.tsx /Users/gabrielzanchett/Projects/DesignData/src/app/globals.css)",
+      "Bash(ls -lh /Users/gabrielzanchett/Projects/DesignData/src/components/dashboard/*.tsx)",
+      "Bash(ls -lh /Users/gabrielzanchett/Projects/DesignData/*.json /Users/gabrielzanchett/Projects/DesignData/*.ts)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(grep -n \"CREATE TABLE client_contracts\" /Users/gabrielzanchett/Projects/DesignData/supabase/migrations/*.sql)",
+      "Bash(find /Users/gabrielzanchett/Projects/DesignData -type f \\\\\\(-name *.json -o -name *.js -o -name *.ts -o -name *.tsx -o -name *.yaml -o -name *.yml \\\\\\) ! -path */node_modules/* ! -path */.next/*)",
+      "Bash(grep -r \"process.env\\\\|CRON_SECRET\" /Users/gabrielzanchett/Projects/DesignData/src/app/api --include=*.ts)",
+      "Bash(git ls-files:*)"
+    ]
+  }
+}
