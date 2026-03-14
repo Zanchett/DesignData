@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+// Color map: value → { bg, text } tailwind classes for pill/badge styling
+type ColorMap = Record<string, { bg: string; text: string }>;
+
 interface EditableCellProps {
   value: string | number | null;
   field: string;
@@ -19,6 +22,7 @@ interface EditableCellProps {
   onSave: (field: string, value: string | number | null) => void;
   className?: string;
   disabled?: boolean;
+  colorMap?: ColorMap;
 }
 
 export function EditableCell({
@@ -29,14 +33,17 @@ export function EditableCell({
   onSave,
   className,
   disabled = false,
+  colorMap,
 }: EditableCellProps) {
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState(String(value ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLocalValue(String(value ?? ""));
-  }, [value]);
+    // Display dates in MM-DD-YYYY (US) format
+    const display = type === "date" && value ? isoToUs(String(value)) : String(value ?? "");
+    setLocalValue(display);
+  }, [value, type]);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -44,6 +51,16 @@ export function EditableCell({
       inputRef.current.select();
     }
   }, [editing]);
+
+  // Convert YYYY-MM-DD ↔ MM-DD-YYYY for display
+  const isoToUs = (v: string) => {
+    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[2]}-${m[3]}-${m[1]}` : v;
+  };
+  const usToIso = (v: string) => {
+    const m = v.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    return m ? `${m[3]}-${m[1]}-${m[2]}` : v;
+  };
 
   const handleSave = () => {
     setEditing(false);
@@ -54,6 +71,9 @@ export function EditableCell({
       const num = trimmed === "" ? null : Number(trimmed);
       if (num !== null && isNaN(num)) return;
       onSave(field, num);
+    } else if (type === "date") {
+      // Convert US display format back to ISO for DB storage
+      onSave(field, trimmed ? usToIso(trimmed) : null);
     } else {
       onSave(field, trimmed || null);
     }
@@ -68,20 +88,33 @@ export function EditableCell({
   }
 
   if (type === "select" && options) {
+    const colors = colorMap?.[String(value ?? "")];
     return (
       <Select
         value={String(value ?? "")}
         onValueChange={(v) => onSave(field, v || null)}
       >
-        <SelectTrigger className="h-7 min-w-[100px] border-transparent bg-transparent text-xs hover:border-border focus:border-border">
+        <SelectTrigger
+          className={cn(
+            "h-7 min-w-[100px] border-transparent text-xs hover:border-border focus:border-border",
+            colors ? `${colors.bg} ${colors.text} font-medium rounded-full px-2.5` : "bg-transparent"
+          )}
+        >
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt} value={opt} className="text-xs">
-              {opt}
-            </SelectItem>
-          ))}
+          {options.map((opt) => {
+            const optColors = colorMap?.[opt];
+            return (
+              <SelectItem key={opt} value={opt} className="text-xs">
+                {optColors ? (
+                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", optColors.bg, optColors.text)}>
+                    {opt}
+                  </span>
+                ) : opt}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     );
@@ -99,7 +132,9 @@ export function EditableCell({
       >
         {type === "number" && value != null
           ? Number(value).toLocaleString()
-          : value || "—"}
+          : type === "date" && value
+            ? isoToUs(String(value))
+            : value || "—"}
       </button>
     );
   }
@@ -107,7 +142,8 @@ export function EditableCell({
   return (
     <Input
       ref={inputRef}
-      type={type === "date" ? "date" : type === "number" ? "number" : "text"}
+      type={type === "number" ? "number" : "text"}
+      placeholder={type === "date" ? "MM-DD-YYYY" : undefined}
       value={localValue}
       onChange={(e) => setLocalValue(e.target.value)}
       onBlur={handleSave}

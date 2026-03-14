@@ -52,8 +52,26 @@ function getMonthForWeek(w: number): number {
 }
 
 const PLAN_OPTIONS = ["Monthly", "Annual"];
-const PACKAGE_OPTIONS = ["Marketing", "Pro", "Full Force"];
+const PACKAGE_OPTIONS = ["Marketing Force", "Pro Force", "Full Force"];
 const ACTIVITY_OPTIONS = ["Going", "Using Rollover", "Paused", "Terminated"];
+
+const PLAN_COLORS: Record<string, { bg: string; text: string }> = {
+  Monthly: { bg: "bg-blue-500/15", text: "text-blue-400" },
+  Annual: { bg: "bg-purple-500/15", text: "text-purple-400" },
+};
+
+const PACKAGE_COLORS: Record<string, { bg: string; text: string }> = {
+  "Marketing Force": { bg: "bg-cyan-500/15", text: "text-cyan-400" },
+  "Pro Force": { bg: "bg-amber-500/15", text: "text-amber-400" },
+  "Full Force": { bg: "bg-indigo-500/15", text: "text-indigo-400" },
+};
+
+const ACTIVITY_COLORS: Record<string, { bg: string; text: string }> = {
+  Going: { bg: "bg-emerald-500/15", text: "text-emerald-400" },
+  "Using Rollover": { bg: "bg-amber-500/15", text: "text-amber-400" },
+  Paused: { bg: "bg-zinc-500/15", text: "text-zinc-400" },
+  Terminated: { bg: "bg-red-500/15", text: "text-red-400" },
+};
 
 const EDITABLE_FIELDS = [
   "project_manager", "contract_sign_date", "plan", "package", "activity",
@@ -289,9 +307,10 @@ export default function HourTrackerPage() {
         `Rollover ${year - 1}`, `ROLLOVER ${year - 1}`,
       ], "rollover_2025");
 
-      // Month columns
+      // Month columns — support "JAN"/"FEB"/... and numeric "1"/"2"/... headers
       MONTH_LABELS_SHORT.forEach((label, i) => {
         fieldMap[label.toLowerCase()] = MONTH_KEYS[i];
+        fieldMap[String(i + 1)] = MONTH_KEYS[i];
       });
 
       // Build a weekly column map: "w1" → 1, "w2" → 2, etc.
@@ -315,11 +334,26 @@ export default function HourTrackerPage() {
 
         for (const [col, rawVal] of Object.entries(importRow)) {
           if (rawVal === undefined || rawVal === null || rawVal === "" || rawVal === "-") continue;
+          // Skip Excel formula strings that weren't resolved to values
+          if (typeof rawVal === "string" && rawVal.startsWith("=")) continue;
 
           // Check if it's a contract field
           const field = fieldMap[col.toLowerCase()];
           if (field) {
-            const finalVal = typeof rawVal === "number" ? rawVal : String(rawVal);
+            let finalVal: string | number = typeof rawVal === "number" ? rawVal : String(rawVal);
+
+            // Normalize date values for contract_sign_date
+            // Spreadsheet uses MM-DD-YYYY (US standard), DB needs YYYY-MM-DD
+            if (field === "contract_sign_date" && typeof finalVal === "string") {
+              const sep = finalVal.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})$/);
+              if (sep) {
+                const yr = sep[3].length === 2 ? (parseInt(sep[3]) < 50 ? `20${sep[3]}` : `19${sep[3]}`) : sep[3];
+                // If year is 4 digits and last part → MM-DD-YYYY or MM/DD/YYYY → YYYY-MM-DD
+                finalVal = `${yr}-${sep[1].padStart(2, "0")}-${sep[2].padStart(2, "0")}`;
+              }
+              // YYYY-MM-DD is already correct for DB
+            }
+
             contractUpdates.push(
               fetch("/api/hour-tracker", {
                 method: "PATCH",
@@ -371,7 +405,9 @@ export default function HourTrackerPage() {
         const row: Record<string, unknown> = {
           Client: r.client_name,
           "Project Manager": r.project_manager || "",
-          "Contract Sign Date": r.contract_sign_date || "",
+          "Contract Sign Date": r.contract_sign_date
+            ? (() => { const m = r.contract_sign_date.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[2]}-${m[3]}-${m[1]}` : r.contract_sign_date; })()
+            : "",
           Plan: r.plan || "",
           Package: r.package || "",
           Activity: r.activity || "",
@@ -720,6 +756,7 @@ export default function HourTrackerPage() {
                           field="plan"
                           type="select"
                           options={PLAN_OPTIONS}
+                          colorMap={PLAN_COLORS}
                           onSave={(f, v) => handleSave(row.client_id, f, v, row.plan)}
                         />
                       </td>
@@ -731,6 +768,7 @@ export default function HourTrackerPage() {
                           field="package"
                           type="select"
                           options={PACKAGE_OPTIONS}
+                          colorMap={PACKAGE_COLORS}
                           onSave={(f, v) => handleSave(row.client_id, f, v, row.package)}
                         />
                       </td>
@@ -742,6 +780,7 @@ export default function HourTrackerPage() {
                           field="activity"
                           type="select"
                           options={ACTIVITY_OPTIONS}
+                          colorMap={ACTIVITY_COLORS}
                           onSave={(f, v) => handleSave(row.client_id, f, v, row.activity)}
                         />
                       </td>
