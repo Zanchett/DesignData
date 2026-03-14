@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       .eq("key", "clickup_token")
       .single();
 
-    const token = clickup_token || data?.value;
+    const token = (clickup_token || data?.value || "").trim();
     if (!token) {
       return NextResponse.json({ ok: false, error: "No token configured" }, { status: 400 });
     }
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   if (clickup_token) {
     upserts.push({
       key: "clickup_token",
-      value: clickup_token,
+      value: clickup_token.trim(),
       updated_at: new Date().toISOString(),
     });
   }

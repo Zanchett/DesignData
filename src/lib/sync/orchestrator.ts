@@ -8,7 +8,8 @@ import { syncTimeEntries } from "./sync-time-entries";
 import { DEFAULT_SYNC_MONTHS, type SyncStep } from "@/lib/constants";
 
 // Process this many lists per API call to stay within Vercel's timeout
-const LISTS_PER_CHUNK = 15;
+// Vercel free tier has 60s function timeout — keep chunks small
+const LISTS_PER_CHUNK = 5;
 
 export interface SyncResult {
   step: SyncStep;
@@ -20,15 +21,28 @@ export interface SyncResult {
 }
 
 async function getSettings(supabase: SupabaseClient) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("app_settings")
     .select("key, value")
     .in("key", ["clickup_token", "team_id", "sync_months"]);
+
+  if (error) {
+    console.error("[SYNC] Failed to read app_settings:", error.message);
+    throw new Error(`Failed to read settings: ${error.message}`);
+  }
 
   const settings: Record<string, string> = {};
   data?.forEach((row) => {
     settings[row.key] = row.value;
   });
+
+  console.log("[SYNC] Settings loaded:", {
+    hasToken: !!settings.clickup_token,
+    tokenLength: settings.clickup_token?.length || 0,
+    teamId: settings.team_id,
+    syncMonths: settings.sync_months,
+  });
+
   return settings;
 }
 
@@ -51,12 +65,16 @@ export async function runSyncStep(
   }
 
   const settings = await getSettings(supabase);
-  const token = settings.clickup_token;
-  const teamId = settings.team_id;
+  const token = settings.clickup_token?.trim();
+  const teamId = settings.team_id?.trim();
   const syncMonths = parseInt(settings.sync_months || String(DEFAULT_SYNC_MONTHS));
 
   if (!token || !teamId) {
-    throw new Error("ClickUp API token and Team ID must be configured in Settings");
+    throw new Error(
+      `ClickUp API token and Team ID must be configured in Settings. ` +
+      `Token present: ${!!token}, Team ID present: ${!!teamId}, ` +
+      `Env check: URL=${!!process.env.NEXT_PUBLIC_SUPABASE_URL}, SRK=${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`
+    );
   }
 
   const clickup = new ClickUpClient(token);
