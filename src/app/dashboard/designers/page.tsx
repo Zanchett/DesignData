@@ -26,11 +26,11 @@ import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 const TOOLTIP_STYLE = {
-  borderRadius: "8px",
-  border: "1px solid oklch(0.25 0.015 260)",
-  background: "oklch(0.17 0.015 260)",
+  borderRadius: "10px",
+  border: "1px solid oklch(0.27 0.025 255)",
+  background: "oklch(0.19 0.03 255)",
   fontSize: "12px",
-  color: "oklch(0.93 0.005 260)",
+  color: "oklch(0.93 0.005 255)",
 };
 
 function fmtHours(v: number): string {
@@ -161,9 +161,9 @@ export default function DesignersPage() {
   });
 
   const RADAR_COLORS = [
-    "oklch(0.65 0.18 260)",
-    "oklch(0.65 0.17 160)",
-    "oklch(0.7 0.17 50)",
+    "oklch(0.62 0.19 255)",
+    "oklch(0.68 0.14 160)",
+    "oklch(0.72 0.14 55)",
   ];
 
   const handleRowClick = (d: Designer) => {
@@ -214,8 +214,8 @@ export default function DesignersPage() {
                       return [value, name];
                     }}
                   />
-                  <Bar dataKey="hours" fill="oklch(0.65 0.18 260)" radius={[4, 4, 0, 0]} name="Hours" />
-                  <Bar dataKey="tasks" fill="oklch(0.65 0.17 160)" radius={[4, 4, 0, 0]} name="Completed" />
+                  <Bar dataKey="hours" fill="oklch(0.62 0.19 255)" radius={[4, 4, 0, 0]} name="Hours" />
+                  <Bar dataKey="tasks" fill="oklch(0.68 0.14 160)" radius={[4, 4, 0, 0]} name="Completed" />
                   <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "4px" }} iconSize={8} />
                 </BarChart>
               </ResponsiveContainer>
@@ -242,7 +242,7 @@ export default function DesignersPage() {
             ) : compareDesigners.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <RadarChart data={radarData}>
-                  <PolarGrid stroke="oklch(0.25 0.015 260)" />
+                  <PolarGrid stroke="oklch(0.27 0.025 255)" />
                   <PolarAngleAxis dataKey="metric" fontSize={11} />
                   <PolarRadiusAxis fontSize={10} domain={[0, 100]} />
                   {compareDesigners.map((d, i) => (

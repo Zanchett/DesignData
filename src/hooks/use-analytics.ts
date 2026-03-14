@@ -90,3 +90,20 @@ export function useWeeklyBillable(year?: number) {
 export function useSyncStatus() {
   return useSWR("/api/sync/status", fetcher, { refreshInterval: 10000 });
 }
+
+export function useReportData(clientId?: number, month?: string, year?: number) {
+  const url =
+    clientId && month && year
+      ? buildUrl(`/api/reports/${clientId}`, { month, year: String(year) })
+      : null;
+  return useSWR(url, fetcher);
+}
+
+export function useReportsList() {
+  return useSWR("/api/reports", fetcher, { refreshInterval: 300000 });
+}
+
+export function usePublicReport(token?: string) {
+  const url = token ? `/api/public/report/${token}` : null;
+  return useSWR(url, fetcher);
+}

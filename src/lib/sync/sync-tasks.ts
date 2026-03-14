@@ -43,10 +43,17 @@ export async function syncTasks(
   let totalTasks = 0;
 
   for (const list of lists) {
-    const tasks = await clickup.getAllTasks(String(list.id), {
-      includesClosed: true,
-      dateUpdatedGt: options?.dateUpdatedGt,
-    });
+    let tasks;
+    try {
+      tasks = await clickup.getAllTasks(String(list.id), {
+        includesClosed: true,
+        dateUpdatedGt: options?.dateUpdatedGt,
+      });
+    } catch (err) {
+      // Skip lists that return ClickUp API errors (deleted/archived lists, internal errors like ITEM_122)
+      console.warn(`[SYNC] Skipping list ${list.id} (folder ${list.folder_id}): ${err instanceof Error ? err.message : err}`);
+      continue;
+    }
 
     if (tasks.length === 0) continue;
 
@@ -76,9 +83,9 @@ export async function syncTasks(
       synced_at: new Date().toISOString(),
     }));
 
-    // Batch upsert tasks in chunks of 200
-    for (let i = 0; i < taskRows.length; i += 200) {
-      const chunk = taskRows.slice(i, i + 200);
+    // Batch upsert tasks in chunks of 50 (smaller to avoid statement timeout with large raw_data payloads)
+    for (let i = 0; i < taskRows.length; i += 50) {
+      const chunk = taskRows.slice(i, i + 50);
       const { error: taskError } = await supabase
         .from("tasks")
         .upsert(chunk, { onConflict: "id" });

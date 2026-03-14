@@ -21,12 +21,12 @@ import {
 import { format, parseISO } from "date-fns";
 
 const COLORS = [
-  "oklch(0.65 0.18 260)",
-  "oklch(0.65 0.17 160)",
-  "oklch(0.7 0.17 50)",
-  "oklch(0.75 0.15 310)",
-  "oklch(0.8 0.13 80)",
-  "oklch(0.6 0.15 200)",
+  "oklch(0.62 0.19 255)",  // Brand Blue
+  "oklch(0.52 0.22 350)",  // Brand Pink
+  "oklch(0.68 0.14 160)",  // Brand Green
+  "oklch(0.48 0.28 290)",  // Brand Purple
+  "oklch(0.72 0.14 55)",   // Brand Orange
+  "oklch(0.58 0.16 220)",  // Teal
 ];
 
 export default function TimeAnalysisPage() {
@@ -60,10 +60,11 @@ export default function TimeAnalysisPage() {
   });
 
   const tooltipStyle = {
-    borderRadius: "8px",
-    border: "1px solid oklch(0.25 0.015 260)",
-    background: "oklch(0.17 0.015 260)",
+    borderRadius: "10px",
+    border: "1px solid oklch(0.27 0.025 255)",
+    background: "oklch(0.19 0.03 255)",
     fontSize: "12px",
+    color: "oklch(0.93 0.005 255)",
   };
 
   return (
@@ -108,18 +109,18 @@ export default function TimeAnalysisPage() {
               <AreaChart data={trends}>
                 <defs>
                   <linearGradient id="hoursGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="oklch(0.65 0.18 260)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="oklch(0.65 0.18 260)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="oklch(0.62 0.19 255)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="oklch(0.62 0.19 255)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="oklch(0.25 0.015 260)" strokeDasharray="3 3" />
+                <CartesianGrid stroke="oklch(0.27 0.025 255)" strokeDasharray="3 3" />
                 <XAxis dataKey="label" fontSize={11} tickLine={false} />
                 <YAxis fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Area
                   type="monotone"
                   dataKey="total_hours"
-                  stroke="oklch(0.65 0.18 260)"
+                  stroke="oklch(0.62 0.19 255)"
                   fill="url(#hoursGradient)"
                   strokeWidth={2}
                   name="Hours"
@@ -146,14 +147,14 @@ export default function TimeAnalysisPage() {
             ) : trends.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={trends}>
-                  <CartesianGrid stroke="oklch(0.25 0.015 260)" strokeDasharray="3 3" />
+                  <CartesianGrid stroke="oklch(0.27 0.025 255)" strokeDasharray="3 3" />
                   <XAxis dataKey="label" fontSize={11} tickLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Line
                     type="monotone"
                     dataKey="tasks_completed"
-                    stroke="oklch(0.65 0.17 160)"
+                    stroke="oklch(0.68 0.14 160)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     name="Tasks Completed"
@@ -161,7 +162,7 @@ export default function TimeAnalysisPage() {
                   <Line
                     type="monotone"
                     dataKey="active_designers"
-                    stroke="oklch(0.7 0.17 50)"
+                    stroke="oklch(0.72 0.14 55)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     name="Active Designers"
@@ -188,7 +189,7 @@ export default function TimeAnalysisPage() {
             ) : workloadData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={workloadData}>
-                  <CartesianGrid stroke="oklch(0.25 0.015 260)" strokeDasharray="3 3" />
+                  <CartesianGrid stroke="oklch(0.27 0.025 255)" strokeDasharray="3 3" />
                   <XAxis dataKey="label" fontSize={11} tickLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />

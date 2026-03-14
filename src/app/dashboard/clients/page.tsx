@@ -24,24 +24,24 @@ import { useState, useCallback } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 const COLORS = [
-  "oklch(0.65 0.18 260)",
-  "oklch(0.65 0.17 160)",
-  "oklch(0.7 0.17 50)",
-  "oklch(0.75 0.15 310)",
-  "oklch(0.8 0.13 80)",
-  "oklch(0.6 0.15 200)",
-  "oklch(0.7 0.12 30)",
-  "oklch(0.65 0.14 130)",
-  "oklch(0.55 0.16 280)",
-  "oklch(0.72 0.13 100)",
+  "oklch(0.62 0.19 255)",  // Brand Blue
+  "oklch(0.52 0.22 350)",  // Brand Pink
+  "oklch(0.68 0.14 160)",  // Brand Green
+  "oklch(0.48 0.28 290)",  // Brand Purple
+  "oklch(0.72 0.14 55)",   // Brand Orange
+  "oklch(0.58 0.16 220)",  // Teal
+  "oklch(0.65 0.12 30)",   // Coral
+  "oklch(0.60 0.14 130)",  // Olive
+  "oklch(0.55 0.18 280)",  // Indigo
+  "oklch(0.70 0.12 100)",  // Lime
 ];
 
 const TOOLTIP_STYLE = {
-  borderRadius: "8px",
-  border: "1px solid oklch(0.25 0.015 260)",
-  background: "oklch(0.17 0.015 260)",
+  borderRadius: "10px",
+  border: "1px solid oklch(0.27 0.025 255)",
+  background: "oklch(0.19 0.03 255)",
   fontSize: "12px",
-  color: "oklch(0.93 0.005 260)",
+  color: "oklch(0.93 0.005 255)",
 };
 
 function fmtHours(v: number): string {
