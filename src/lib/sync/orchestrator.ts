@@ -7,10 +7,16 @@ import { syncTasks } from "./sync-tasks";
 import { syncTimeEntries } from "./sync-time-entries";
 import { DEFAULT_SYNC_MONTHS, type SyncStep } from "@/lib/constants";
 
+// Process this many lists per API call to stay within Vercel's timeout
+const LISTS_PER_CHUNK = 15;
+
 export interface SyncResult {
   step: SyncStep;
   recordsSynced: number;
   error?: string;
+  warnings?: string[];
+  /** If set, the client should call this step again with this cursor */
+  nextCursor?: number;
 }
 
 async function getSettings(supabase: SupabaseClient) {
@@ -29,7 +35,8 @@ async function getSettings(supabase: SupabaseClient) {
 export async function runSyncStep(
   supabase: SupabaseClient,
   step: SyncStep,
-  syncLogId?: string
+  syncLogId?: string,
+  cursor?: number
 ): Promise<SyncResult> {
   // Check if sync was cancelled
   if (syncLogId) {
@@ -82,11 +89,31 @@ export async function runSyncStep(
       recordsSynced = await syncLists(clickup, supabase);
       break;
 
-    case "tasks":
-      recordsSynced = await syncTasks(clickup, supabase, {
+    case "tasks": {
+      // Chunked: process LISTS_PER_CHUNK lists at a time
+      const result = await syncTasks(clickup, supabase, {
         dateUpdatedGt: syncStartDate,
+        listOffset: cursor || 0,
+        listLimit: LISTS_PER_CHUNK,
       });
-      break;
+      recordsSynced = result.tasksSynced;
+
+      // If there are more lists to process, return a cursor
+      if (result.hasMore) {
+        return {
+          step,
+          recordsSynced,
+          warnings: result.warnings,
+          nextCursor: result.nextOffset,
+        };
+      }
+
+      return {
+        step,
+        recordsSynced,
+        warnings: result.warnings,
+      };
+    }
 
     case "time_entries":
       recordsSynced = await syncTimeEntries(clickup, supabase, teamId, {

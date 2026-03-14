@@ -32,14 +32,20 @@ export function SyncStatusBadge() {
     try {
       for (const step of SYNC_STEPS) {
         setCurrentStep(step);
-        const res = await fetch("/api/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ step, sync_log_id: logId }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error);
-        logId = result.sync_log_id;
+        let cursor: number | undefined;
+
+        // Loop for chunked steps (tasks) that may need multiple calls
+        do {
+          const res = await fetch("/api/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ step, sync_log_id: logId, cursor }),
+          });
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.error);
+          logId = result.sync_log_id;
+          cursor = result.nextCursor;
+        } while (cursor !== undefined);
       }
     } catch (err) {
       console.error("Sync failed:", err);

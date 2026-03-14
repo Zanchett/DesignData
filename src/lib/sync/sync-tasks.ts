@@ -22,17 +22,34 @@ export function extractBillableMonth(customFields?: ClickUpCustomField[]): strin
   return option?.name || null;
 }
 
+export interface SyncTasksResult {
+  tasksSynced: number;
+  hasMore: boolean;
+  nextOffset: number;
+  warnings: string[];
+}
+
 export async function syncTasks(
   clickup: ClickUpClient,
   supabase: SupabaseClient,
-  options?: { dateUpdatedGt?: number }
-): Promise<number> {
+  options?: {
+    dateUpdatedGt?: number;
+    listOffset?: number;
+    listLimit?: number;
+  }
+): Promise<SyncTasksResult> {
   const { data: lists, error: listsError } = await supabase
     .from("lists")
     .select("id, folder_id")
     .order("id");
   if (listsError) throw listsError;
-  if (!lists?.length) return 0;
+  if (!lists?.length) return { tasksSynced: 0, hasMore: false, nextOffset: 0, warnings: [] };
+
+  const offset = options?.listOffset || 0;
+  const limit = options?.listLimit || lists.length;
+  const chunk = lists.slice(offset, offset + limit);
+  const hasMore = offset + limit < lists.length;
+  const nextOffset = offset + limit;
 
   // Get all known designer IDs to check for missing assignees
   const { data: knownDesigners } = await supabase
@@ -41,8 +58,9 @@ export async function syncTasks(
   const knownIds = new Set((knownDesigners || []).map((d) => d.id));
 
   let totalTasks = 0;
+  const warnings: string[] = [];
 
-  for (const list of lists) {
+  for (const list of chunk) {
     let tasks;
     try {
       tasks = await clickup.getAllTasks(String(list.id), {
@@ -51,7 +69,9 @@ export async function syncTasks(
       });
     } catch (err) {
       // Skip lists that return ClickUp API errors (deleted/archived lists, internal errors like ITEM_122)
-      console.warn(`[SYNC] Skipping list ${list.id} (folder ${list.folder_id}): ${err instanceof Error ? err.message : err}`);
+      const msg = `Skipped list ${list.id} (folder ${list.folder_id}): ${err instanceof Error ? err.message : err}`;
+      console.warn(`[SYNC] ${msg}`);
+      warnings.push(msg);
       continue;
     }
 
@@ -83,13 +103,25 @@ export async function syncTasks(
       synced_at: new Date().toISOString(),
     }));
 
-    // Batch upsert tasks in chunks of 50 (smaller to avoid statement timeout with large raw_data payloads)
+    // Batch upsert tasks in chunks of 50
     for (let i = 0; i < taskRows.length; i += 50) {
-      const chunk = taskRows.slice(i, i + 50);
-      const { error: taskError } = await supabase
-        .from("tasks")
-        .upsert(chunk, { onConflict: "id" });
-      if (taskError) throw taskError;
+      const batch = taskRows.slice(i, i + 50);
+      try {
+        const { error: taskError } = await supabase
+          .from("tasks")
+          .upsert(batch, { onConflict: "id" });
+        if (taskError) {
+          const msg = `Failed to upsert tasks for list ${list.id}: ${taskError.message}`;
+          console.warn(`[SYNC] ${msg}`);
+          warnings.push(msg);
+          continue;
+        }
+      } catch (err) {
+        const msg = `Error upserting tasks for list ${list.id}: ${err instanceof Error ? err.message : err}`;
+        console.warn(`[SYNC] ${msg}`);
+        warnings.push(msg);
+        continue;
+      }
     }
 
     // Collect all assignees and ensure they exist in designers table
@@ -107,7 +139,7 @@ export async function syncTasks(
         email: a.email || null,
         color: a.color || null,
         profile_picture: a.profilePicture || null,
-        is_active: false, // Mark as inactive since they weren't in team members
+        is_active: false,
         raw_data: a,
         synced_at: new Date().toISOString(),
       }));
@@ -115,9 +147,10 @@ export async function syncTasks(
       const { error: insertErr } = await supabase
         .from("designers")
         .upsert(missingRows, { onConflict: "id" });
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        warnings.push(`Failed to upsert designers: ${insertErr.message}`);
+      }
 
-      // Add to known set so we don't re-insert
       missingRows.forEach((r) => knownIds.add(r.id));
     }
 
@@ -130,18 +163,24 @@ export async function syncTasks(
     );
 
     if (assigneeRows.length > 0) {
-      // Delete existing assignees for these tasks first to handle removals
       const taskIds = tasks.map((t) => t.id);
       await supabase.from("task_assignees").delete().in("task_id", taskIds);
 
       const { error: assigneeError } = await supabase
         .from("task_assignees")
         .upsert(assigneeRows, { onConflict: "task_id,designer_id" });
-      if (assigneeError) throw assigneeError;
+      if (assigneeError) {
+        warnings.push(`Failed to upsert assignees for list ${list.id}: ${assigneeError.message}`);
+      }
     }
 
     totalTasks += tasks.length;
   }
 
-  return totalTasks;
+  return {
+    tasksSynced: totalTasks,
+    hasMore,
+    nextOffset,
+    warnings,
+  };
 }

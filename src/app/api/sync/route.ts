@@ -3,9 +3,15 @@ import { createServerClient } from "@/lib/supabase/server";
 import { runSyncStep } from "@/lib/sync/orchestrator";
 import { SYNC_STEPS, type SyncStep } from "@/lib/constants";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { step, sync_log_id } = body as { step: SyncStep; sync_log_id?: string };
+  const { step, sync_log_id, cursor } = body as {
+    step: SyncStep;
+    sync_log_id?: string;
+    cursor?: number;
+  };
 
   if (!step || !SYNC_STEPS.includes(step)) {
     return NextResponse.json(
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await runSyncStep(supabase, step, logId);
+    const result = await runSyncStep(supabase, step, logId, cursor);
 
     // Update records count
     if (logId) {
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
         .from("sync_log")
         .update({
           status: "failed",
-          error_message: message,
+          error_message: message.substring(0, 1000),
           completed_at: new Date().toISOString(),
         })
         .eq("id", logId);

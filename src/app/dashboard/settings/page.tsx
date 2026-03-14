@@ -31,6 +31,9 @@ import {
   Hash,
   StopCircle,
   Calendar,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useSyncStatus } from "@/hooks/use-analytics";
 import { SYNC_STEPS } from "@/lib/constants";
@@ -49,9 +52,13 @@ export default function SettingsPage() {
   } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState("");
+  const [syncProgress, setSyncProgress] = useState("");
   const [saved, setSaved] = useState(false);
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const syncLogIdRef = useRef<string | undefined>(undefined);
   const cancelledRef = useRef(false);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
   const { data: syncData, mutate: refreshSync } = useSyncStatus();
 
@@ -102,30 +109,67 @@ export default function SettingsPage() {
 
   async function handleSync() {
     setSyncing(true);
+    setSyncError(null);
+    setSyncWarnings([]);
     cancelledRef.current = false;
     syncLogIdRef.current = undefined;
+
+    const allWarnings: string[] = [];
 
     try {
       for (const step of SYNC_STEPS) {
         if (cancelledRef.current) break;
 
         setSyncStep(step);
-        const res: Response = await fetch("/api/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ step, sync_log_id: syncLogIdRef.current }),
-        });
-        const result = await res.json() as { error?: string; sync_log_id?: string };
-        if (!res.ok) throw new Error(result.error);
-        syncLogIdRef.current = result.sync_log_id;
+        setSyncProgress("");
+        let cursor: number | undefined;
+        let chunkNum = 0;
 
-        if (result.error === "Sync cancelled") break;
+        // Loop for chunked steps (tasks) that may need multiple calls
+        do {
+          if (cancelledRef.current) break;
+          chunkNum++;
+
+          if (cursor !== undefined) {
+            setSyncProgress(`(batch ${chunkNum})`);
+          }
+
+          const res: Response = await fetch("/api/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              step,
+              sync_log_id: syncLogIdRef.current,
+              cursor,
+            }),
+          });
+          const result = await res.json() as {
+            error?: string;
+            sync_log_id?: string;
+            nextCursor?: number;
+            warnings?: string[];
+          };
+          if (!res.ok) throw new Error(result.error);
+          syncLogIdRef.current = result.sync_log_id;
+          cursor = result.nextCursor;
+
+          // Collect warnings
+          if (result.warnings?.length) {
+            allWarnings.push(...result.warnings);
+            setSyncWarnings([...allWarnings]);
+          }
+
+          if (result.error === "Sync cancelled") break;
+        } while (cursor !== undefined);
       }
     } catch (err) {
-      console.error("Sync failed:", err);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error("Sync failed:", msg);
+      setSyncError(msg);
     } finally {
       setSyncing(false);
       setSyncStep("");
+      setSyncProgress("");
       syncLogIdRef.current = undefined;
       refreshSync();
     }
@@ -278,7 +322,7 @@ export default function SettingsPage() {
               {syncing ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Syncing {syncStep}...
+                  Syncing {syncStep} {syncProgress}...
                 </>
               ) : (
                 <>
@@ -331,10 +375,39 @@ export default function SettingsPage() {
                       }
                     >
                       {step.replace("_", " ")}
+                      {isCurrent && syncProgress ? ` ${syncProgress}` : ""}
                     </span>
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Sync Error */}
+          {syncError && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-xs font-medium text-red-500">
+                <XCircle className="h-3.5 w-3.5" />
+                Sync Failed
+              </div>
+              <p className="text-xs text-red-400">{syncError}</p>
+            </div>
+          )}
+
+          {/* Sync Warnings (shown during and after sync) */}
+          {syncWarnings.length > 0 && (
+            <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-yellow-500">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {syncWarnings.length} warning{syncWarnings.length !== 1 ? "s" : ""} during sync
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {syncWarnings.map((w, i) => (
+                  <p key={i} className="text-[11px] text-yellow-400/80 font-mono leading-relaxed">
+                    • {w}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -363,28 +436,57 @@ export default function SettingsPage() {
                   records_synced: number;
                   error_message?: string;
                 }) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          log.status === "completed"
-                            ? "default"
-                            : log.status === "failed" || log.status === "cancelled"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {log.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {format(new Date(log.started_at), "MMM d, HH:mm")}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {log.records_synced}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow
+                      key={log.id}
+                      className={log.error_message ? "cursor-pointer hover:bg-muted/50" : ""}
+                      onClick={() =>
+                        log.error_message &&
+                        setExpandedLog(expandedLog === log.id ? null : log.id)
+                      }
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {log.error_message && (
+                            expandedLog === log.id ? (
+                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                            )
+                          )}
+                          <Badge
+                            variant={
+                              log.status === "completed"
+                                ? "default"
+                                : log.status === "failed" || log.status === "cancelled"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {log.status}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {format(new Date(log.started_at), "MMM d, HH:mm")}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {log.records_synced}
+                      </TableCell>
+                    </TableRow>
+                    {expandedLog === log.id && log.error_message && (
+                      <TableRow key={`${log.id}-error`}>
+                        <TableCell colSpan={3} className="bg-red-500/5 border-t-0">
+                          <div className="rounded-md bg-red-500/10 p-2.5">
+                            <p className="text-[11px] font-mono text-red-400 break-all whitespace-pre-wrap">
+                              {log.error_message}
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 )
               )}
               {(!syncData?.history || syncData.history.length === 0) && (
