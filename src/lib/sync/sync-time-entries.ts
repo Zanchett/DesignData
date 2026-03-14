@@ -36,11 +36,17 @@ export async function syncTimeEntries(
 
   if (!assigneeIds) return 0;
 
-  const entries = await clickup.getTimeEntries(teamId, {
-    startDate,
-    endDate,
-    assignee: assigneeIds,
-  });
+  let entries;
+  try {
+    entries = await clickup.getTimeEntries(teamId, {
+      startDate,
+      endDate,
+      assignee: assigneeIds,
+    });
+  } catch (err) {
+    console.warn(`[SYNC] Time entries API error: ${err instanceof Error ? err.message : err}`);
+    throw err;
+  }
 
   if (entries.length === 0) return 0;
 

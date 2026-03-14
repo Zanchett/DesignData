@@ -163,14 +163,18 @@ export async function syncTasks(
     );
 
     if (assigneeRows.length > 0) {
-      const taskIds = tasks.map((t) => t.id);
-      await supabase.from("task_assignees").delete().in("task_id", taskIds);
+      try {
+        const taskIds = tasks.map((t) => t.id);
+        await supabase.from("task_assignees").delete().in("task_id", taskIds);
 
-      const { error: assigneeError } = await supabase
-        .from("task_assignees")
-        .upsert(assigneeRows, { onConflict: "task_id,designer_id" });
-      if (assigneeError) {
-        warnings.push(`Failed to upsert assignees for list ${list.id}: ${assigneeError.message}`);
+        const { error: assigneeError } = await supabase
+          .from("task_assignees")
+          .upsert(assigneeRows, { onConflict: "task_id,designer_id" });
+        if (assigneeError) {
+          warnings.push(`Failed to upsert assignees for list ${list.id}: ${assigneeError.message}`);
+        }
+      } catch (err) {
+        warnings.push(`Assignee sync error for list ${list.id}: ${err instanceof Error ? err.message : err}`);
       }
     }
 

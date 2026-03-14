@@ -67,19 +67,22 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    const stack = error instanceof Error ? error.stack?.substring(0, 500) : "";
+
+    const errorDetail = `[Step: ${step}, Cursor: ${cursor ?? "none"}] ${message}`;
 
     if (logId) {
       await supabase
         .from("sync_log")
         .update({
           status: "failed",
-          error_message: message.substring(0, 1000),
+          error_message: errorDetail.substring(0, 1000),
           completed_at: new Date().toISOString(),
         })
         .eq("id", logId);
     }
 
-    console.error(`[SYNC ERROR] Step: ${step}`, error);
-    return NextResponse.json({ error: message, sync_log_id: logId }, { status: 500 });
+    console.error(`[SYNC ERROR] ${errorDetail}`, stack);
+    return NextResponse.json({ error: errorDetail, sync_log_id: logId }, { status: 500 });
   }
 }

@@ -17,7 +17,14 @@ export async function syncLists(
   let totalLists = 0;
 
   for (const client of clients) {
-    const lists = await clickup.getLists(String(client.id));
+    let lists;
+    try {
+      lists = await clickup.getLists(String(client.id));
+    } catch (err) {
+      // Skip folders that return API errors (permissions, deleted, etc.)
+      console.warn(`[SYNC] Skipping lists for folder ${client.id}: ${err instanceof Error ? err.message : err}`);
+      continue;
+    }
 
     // Only include internal communication lists
     const internalLists = lists.filter(
