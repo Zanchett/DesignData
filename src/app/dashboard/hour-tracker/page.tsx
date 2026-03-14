@@ -718,8 +718,8 @@ export default function HourTrackerPage() {
                   const monthlyTotal = MONTH_KEYS.reduce((sum, k) => sum + (row[k] || 0), 0);
                   const clientWeekly = weekly[String(row.client_id)] || {};
                   const hoursUsed = ALL_WEEKS.reduce((s, w) => s + (clientWeekly[String(w)] || 0), 0);
-                  const hoursLeft = monthlyTotal - hoursUsed;
                   const totalAvailable = monthlyTotal + (row.rollover_2025 || 0);
+                  const hoursLeft = totalAvailable - hoursUsed;
 
                   return (
                     <tr key={row.client_id} className="border-b hover:bg-muted/40 transition-colors even:bg-muted/10">
